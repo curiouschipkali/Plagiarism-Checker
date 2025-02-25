@@ -45,7 +45,7 @@ export async function POST(req: Request) {
           },
       },
       
-      "These are the two PDFs. One is a PYQ for understanding grading and structure. The other is a syllabus. Generate a question paper that follows the format, weightage, and difficulty distribution of the PYQ while ensuring all questions are within the syllabus. Maintain the same number of questions and formatting style.",
+      "These are the two PDFs. One is a PYQ for understanding how each question is graded and the structure of the paper. Analyze the PYQ to determine the type of questions, their marks distribution, and the number of questions per chapter. Ensure that all questions in the generated paper are strictly within the syllabus provided in the second PDF. Maintain the exact number of questions and total marks as in the PYQ. Distribute marks in the same way and ensure the difficulty progression follows the same pattern. Keep a balanced mix of easy, moderate, and difficult questions in the same ratio. Ensure that the variety of question types matches the PYQ, including any proof-based, application-based, or conceptual questions. Follow the formatting of the PYQ exactly, including the number of sections, line breaks, indentation, bolding, and numbering. No two questions should test the same concept in different wording. Each question should introduce a unique aspect of the syllabus. Reply with only the complete question paper and nothing else.      ",
       
   ]);
   

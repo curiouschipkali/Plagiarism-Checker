@@ -64,11 +64,10 @@ export default function ChatWithFiles() {
         throw new Error("Failed to generate question paper.");
       }
 
-      // Convert response into a Blob (binary data)
       const pdfBlob = await response.blob();
       const pdfUrl = URL.createObjectURL(pdfBlob);
 
-      setDownloadUrl(pdfUrl); // Save the URL for download
+      setDownloadUrl(pdfUrl);
       toast.success("Question paper generated successfully!");
     } catch (error) {
       toast.error("Failed to generate paper. Please try again.");
