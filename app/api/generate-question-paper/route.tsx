@@ -101,8 +101,8 @@ const MyDocument = ({ questionPaperText }: { questionPaperText: string }) => (
 export async function createPDF(questionPaperText: string){
   try {
     const stream = await ReactPDF.renderToStream(<MyDocument questionPaperText={questionPaperText} />);
-    await renderToFile(<MyDocument questionPaperText={questionPaperText} />, `${"C:/Users/Surya/Downloads"}/my-doc.pdf`);
-    console.log("Stream:", stream);
+    // await renderToFile(<MyDocument questionPaperText={questionPaperText} />, `${"C:/Users/Surya/Downloads"}/my-doc.pdf`);
+    // console.log("Stream:", stream);
   return stream as unknown as ReadableStream;
 
   } catch (error) {
