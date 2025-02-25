@@ -1,8 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { streamObject } from "ai";
 import { NextResponse } from "next/server";
-import PDFDocument from "pdfkit";
-// import puppeteer from "puppeteer";
 import { Page, Text, View, Document, StyleSheet, renderToBuffer, PDFDownloadLink, renderToStream, renderToFile  } from '@react-pdf/renderer';
 import { size } from "pdfkit/js/page";
 import React from 'react'
@@ -33,9 +30,6 @@ export async function POST(req: Request) {
     const syllabusBuffer = Buffer.from( await syllabusFile.arrayBuffer()).toString("base64");
 
     console.log("Files received successfully");
-
-
-
 
     const result = await model.generateContent([
       {

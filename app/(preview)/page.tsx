@@ -36,11 +36,11 @@ export default function ChatWithFiles() {
     object: partialQuestions,
     isLoading,
   } = experimental_useObject({
-    api: "/api/generate-quiz",
+    api: "/api/generate-question-paper",
     schema: questionsSchema,
     initialValue: undefined,
     onError: (error) => {
-      toast.error("Failed to generate quiz. Please try again.");
+      toast.error("Failed to generate paper. Please try again.");
       setFiles([]);
     },
     onFinish: ({ object }) => {
@@ -196,10 +196,10 @@ export default function ChatWithFiles() {
               {isLoading ? (
                 <span className="flex items-center space-x-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Generating Quiz...</span>
+                  <span>Generating Paper...</span>
                 </span>
               ) : (
-                "Generate Quiz"
+                "Generate Paper"
               )}
             </Button>
           </form>
