@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 dotenv.config();
 
-export const maxDuration = 180;
+export const maxDuration = 60;
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY as string);
 const model = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
 
