@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileUp, Plus, Loader2 } from "lucide-react";
+import { FileUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DownloadButton from "@/components/download-button";
 import {
   Card,
   CardContent,
@@ -12,8 +13,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Link } from "@/components/ui/link";
-import NextLink from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function ChatWithFiles() {
@@ -40,42 +39,36 @@ export default function ChatWithFiles() {
     setFiles(validFiles);
   };
 
-  const encodeFileAsBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleSubmitWithFiles = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-  
+
     if (files.length !== 2) {
       toast.error("Please upload exactly two PDFs.");
       return;
     }
-  
+
     setIsLoading(true);
     setDownloadUrl(null);
-  
+
     try {
       const formData = new FormData();
       formData.append("pyq", files[0]); // First PDF
       formData.append("syllabus", files[1]); // Second PDF
-  
+
       const response = await fetch("/api/generate-question-paper", {
         method: "POST",
-        body: formData, // No need for headers; `fetch` auto-sets `Content-Type`
+        body: formData,
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to generate question paper.");
       }
-  
-      const result = await response.json();
-      setDownloadUrl(result.downloadUrl);
+
+      // Convert response into a Blob (binary data)
+      const pdfBlob = await response.blob();
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      setDownloadUrl(pdfUrl); // Save the URL for download
       toast.success("Question paper generated successfully!");
     } catch (error) {
       toast.error("Failed to generate paper. Please try again.");
@@ -83,7 +76,6 @@ export default function ChatWithFiles() {
       setIsLoading(false);
     }
   };
-  
 
   return (
     <div
@@ -96,7 +88,9 @@ export default function ChatWithFiles() {
       onDrop={(e) => {
         e.preventDefault();
         setIsDragging(false);
-        handleFileChange({ target: { files: e.dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
+        handleFileChange({
+          target: { files: e.dataTransfer.files },
+        } as React.ChangeEvent<HTMLInputElement>);
       }}
     >
       <AnimatePresence>
@@ -157,16 +151,9 @@ export default function ChatWithFiles() {
           </form>
         </CardContent>
 
-        {downloadUrl && (
-          <CardFooter className="flex flex-col items-center space-y-4">
-            <p className="text-sm text-muted-foreground">Your question paper is ready!</p>
-            <Button asChild>
-              <a href={downloadUrl} download>
-                Download Question Paper
-              </a>
-            </Button>
-          </CardFooter>
-        )}
+        <CardFooter className="flex flex-col items-center space-y-4">
+          {downloadUrl && <DownloadButton downloadUrl={downloadUrl} />}
+        </CardFooter>
       </Card>
     </div>
   );
