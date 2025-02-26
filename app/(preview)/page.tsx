@@ -18,6 +18,7 @@ import { AnimatePresence, motion } from "framer-motion";
 export default function ChatWithFiles() {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState<string>("");
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -54,6 +55,7 @@ export default function ChatWithFiles() {
       const formData = new FormData();
       formData.append("pyq", files[0]); // First PDF
       formData.append("syllabus", files[1]); // Second PDF
+      formData.append("customPrompt", customPrompt.trim()); // Custom prompt
 
       const response = await fetch("/api/generate-question-paper", {
         method: "POST",
@@ -78,7 +80,7 @@ export default function ChatWithFiles() {
 
   return (
     <div
-      className="min-h-[100dvh] w-full flex justify-center"
+      className="min-h-[1dvh] w-full flex flex-col items-center justify-center"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -104,7 +106,9 @@ export default function ChatWithFiles() {
           </motion.div>
         )}
       </AnimatePresence>
+      <div className="flex flex-col">
 
+      </div>
       <Card className="w-full max-w-md h-full border-0 sm:border sm:h-fit mt-12">
         <CardHeader className="text-center space-y-6">
           <div className="space-y-2">
@@ -154,6 +158,35 @@ export default function ChatWithFiles() {
           {downloadUrl && <DownloadButton downloadUrl={downloadUrl} />}
         </CardFooter>
       </Card>
+
+
+      <div className="flex flex-col">
+        <Card className="w-full max-w-md h-full border-0 sm:border sm:h-fit mt-12">
+
+        <CardHeader className="text-center space-y-6">
+          <div className="space-y-2">
+            <CardTitle className="text-2xl font-bold">Submit Custom prompt</CardTitle>
+            <CardDescription className="text-base">
+              Enter a custom description to the bot In order to aid it in making the question paper.
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmitWithFiles} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Enter your custom prompt here"
+              className="w-full p-2 border-2 border-muted-foreground/25 rounded-lg"
+              value={customPrompt} // Bind input to state
+              onChange={(e) => setCustomPrompt(e.target.value)} // Update state on change
+            />
+          </form>
+        </CardContent>
+
+        </Card>
     </div>
+    </div>
+    
   );
 }
