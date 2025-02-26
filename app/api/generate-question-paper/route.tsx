@@ -79,11 +79,12 @@ export async function POST(req: Request) {
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
-    backgroundColor: '#E4E4E4'
+    backgroundColor: '#FFFFFF',
+    padding:12
   },
   section: {
     margin: 10,
-    padding: 10,
+    padding: 12,
     flexGrow: 1
   }
 });
