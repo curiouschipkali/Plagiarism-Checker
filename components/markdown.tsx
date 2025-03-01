@@ -1,93 +1,77 @@
-import Link from "next/link";
-import React, { memo } from "react";
-import ReactMarkdown, { Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
+import Link from 'next/link';
+import React, { memo } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Page, Text, View, Document, StyleSheet, renderToBuffer, PDFDownloadLink, renderToStream, renderToFile  } from '@react-pdf/renderer';
 
 const components: Partial<Components> = {
-  p: ({ children, ...props }) => (
-    <p className="my-2" {...props}>
+  pre: ({ children }) => (
+    <Text>
       {children}
-    </p>
+    </Text>
   ),
-  pre: ({ children }) => <>{children}</>,
-  ol: ({ children, ...props }) => (
-    <ol className="list-decimal list-outside ml-4" {...props}>
+  ol: ({ node, children, ...props }) => (
+    <Text style={{ marginLeft: 20 }}>
       {children}
-    </ol>
+    </Text>
   ),
-  li: ({ children, ...props }) => (
-    <li className="py-1" {...props}>
+  li: ({ node, children, ...props }) => (
+    <Text style={{ marginVertical: 5 }}>
       {children}
-    </li>
+    </Text>
   ),
-  ul: ({ children, ...props }) => (
-    <ul className="list-disc list-outside ml-4" {...props}>
+  ul: ({ node, children, ...props }) => (
+    <Text style={{ marginLeft: 20 }}>
       {children}
-    </ul>
+    </Text>
   ),
-  strong: ({ children, ...props }) => (
-    <span className="font-semibold" {...props}>
+  strong: ({ node, children, ...props }) => (
+    <Text style={{ fontWeight: 'bold' }}>
       {children}
-    </span>
+    </Text>
   ),
-  a: ({ node, children, ...props }) => {
-    return (
-      // @ts-expect-error
-      <Link
-        className="text-blue-500 hover:underline"
-        target="_blank"
-        rel="noreferrer"
-        {...props}
-      >
-        {children}
-      </Link>
-    );
-  },
-  h1: ({ children, ...props }) => (
-    <h1 className="text-3xl font-semibold mt-6 mb-2" {...props}>
+  a: ({ node, children, ...props }) => (
+    <Text style={{ color: 'blue', textDecoration: 'underline' }}>
       {children}
-    </h1>
+    </Text>
   ),
-  h2: ({ children, ...props }) => (
-    <h2 className="text-2xl font-semibold mt-6 mb-2" {...props}>
+  h1: ({ node, children, ...props }) => (
+    <Text style={{ fontSize: 24, fontWeight: 'bold', marginVertical: 10 }}>
       {children}
-    </h2>
+    </Text>
   ),
-  h3: ({ children, ...props }) => (
-    <h3 className="text-xl font-semibold mt-6 mb-2" {...props}>
+  h2: ({ node, children, ...props }) => (
+    <Text style={{ fontSize: 20, fontWeight: 'bold', marginVertical: 8 }}>
       {children}
-    </h3>
+    </Text>
   ),
-  h4: ({ children, ...props }) => (
-    <h4 className="text-lg font-semibold mt-6 mb-2" {...props}>
+  h3: ({ node, children, ...props }) => (
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginVertical: 6 }}>
       {children}
-    </h4>
+    </Text>
   ),
-  h5: ({ children, ...props }) => (
-    <h5 className="text-base font-semibold mt-6 mb-2" {...props}>
+  h4: ({ node, children, ...props }) => (
+    <Text style={{ fontSize: 16, fontWeight: 'bold', marginVertical: 5 }}>
       {children}
-    </h5>
+    </Text>
   ),
-  h6: ({ children, ...props }) => (
-    <h6 className="text-sm font-semibold mt-6 mb-2" {...props}>
+  h5: ({ node, children, ...props }) => (
+    <Text style={{ fontSize: 14, fontWeight: 'bold', marginVertical: 4 }}>
       {children}
-    </h6>
+    </Text>
+  ),
+  h6: ({ node, children, ...props }) => (
+    <Text style={{ fontSize: 12, fontWeight: 'bold', marginVertical: 3 }}>
+      {children}
+    </Text>
   ),
 };
 
-const remarkPlugins = [remarkGfm, remarkMath];
-const rehypePlugins = [rehypeKatex];
+const remarkPlugins = [remarkGfm];
 
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
   return (
-    <ReactMarkdown
-      remarkPlugins={remarkPlugins}
-      rehypePlugins={rehypePlugins}
-      components={components}
-    >
+    <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
       {children}
     </ReactMarkdown>
   );
@@ -95,5 +79,5 @@ const NonMemoizedMarkdown = ({ children }: { children: string }) => {
 
 export const Markdown = memo(
   NonMemoizedMarkdown,
-  (prevProps, nextProps) => prevProps.children === nextProps.children
+  (prevProps, nextProps) => prevProps.children === nextProps.children,
 );
