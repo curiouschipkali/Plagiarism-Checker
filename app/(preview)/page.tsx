@@ -200,7 +200,7 @@ export default function PlagiarismChecker() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="text-sm bg-muted p-3 rounded-md">
-                    <p className="italic">"{result.text}"</p>
+                    <p className="italic">{result.text}</p>
                   </div>
                 </CardContent>
               </Card>
