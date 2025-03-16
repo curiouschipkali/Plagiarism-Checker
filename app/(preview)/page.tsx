@@ -170,8 +170,8 @@ export default function PlagiarismChecker() {
               <CardDescription>
                 {overallSimilarity !== null ? (
                   overallSimilarity > 30 
-                    ? "High similarity detected. Review the sources below."
-                    : "Low similarity detected. Document appears mostly original."
+                    ? "Similarity detected. Review the sources below."
+                    : "Similarity detected. Document appears mostly original."
                 ) : ''}
               </CardDescription>
             </CardHeader>
