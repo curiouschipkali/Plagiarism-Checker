@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileUp, Loader2 } from "lucide-react";
+import { FileUp, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DownloadButton from "@/components/download-button";
 import {
   Card,
   CardContent,
@@ -15,64 +14,71 @@ import {
 } from "@/components/ui/card";
 import { AnimatePresence, motion } from "framer-motion";
 
-export default function ChatWithFiles() {
-  const [files, setFiles] = useState<File[]>([]);
+// Placeholder for plagiarism result type
+interface PlagiarismSource {
+  text: string;
+  source: string;
+  similarity: number;
+  url?: string;
+}
+
+export default function PlagiarismChecker() {
+  const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [customPrompt, setCustomPrompt] = useState<string>("");
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [plagiarismResults, setPlagiarismResults] = useState<PlagiarismSource[]>([]);
+  const [overallSimilarity, setOverallSimilarity] = useState<number | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    const validFiles = selectedFiles.filter(
-      (file) => file.type === "application/pdf" && file.size <= 5 * 1024 * 1024
-    );
-
-    if (validFiles.length !== selectedFiles.length) {
-      toast.error("Only PDF files under 5MB are allowed.");
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | { target: { files: FileList } }) => {
+    const selectedFile = e.target.files?.[0];
+    
+    if (!selectedFile) {
+      return;
     }
-
-    if (validFiles.length > 2) {
-      toast.error("You can only upload up to two PDFs.");
+    
+    if (selectedFile.type !== "application/pdf" || selectedFile.size > 5 * 1024 * 1024) {
+      toast.error("Only PDF files under 5MB are allowed.");
       return;
     }
 
-    setFiles(validFiles);
+    setFile(selectedFile);
+    // Reset results when a new file is uploaded
+    setPlagiarismResults([]);
+    setOverallSimilarity(null);
   };
 
-  const handleSubmitWithFiles = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (files.length !== 2) {
-      toast.error("Please upload exactly two PDFs.");
+    if (!file) {
+      toast.error("Please upload a PDF file.");
       return;
     }
 
     setIsLoading(true);
-    setDownloadUrl(null);
 
     try {
       const formData = new FormData();
-      formData.append("pyq", files[0]); // First PDF
-      formData.append("syllabus", files[1]); // Second PDF
-      formData.append("customPrompt", customPrompt.trim()); // Custom prompt
+      formData.append("document", file);
+      formData.append("customPrompt", customPrompt.trim());
 
-      const response = await fetch("/api/generate-question-paper", {
+      const response = await fetch("/api/check-plagiarism", {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate question paper.");
+        throw new Error("Failed to check plagiarism.");
       }
 
-      const pdfBlob = await response.blob();
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-
-      setDownloadUrl(pdfUrl);
-      toast.success("Question paper generated successfully!");
+      const data = await response.json();
+      setPlagiarismResults(data.sources);
+      setOverallSimilarity(data.overallSimilarity);
+      
+      toast.success("Plagiarism check completed!");
     } catch (error) {
-      toast.error("Failed to generate paper. Please try again.");
+      toast.error("Failed to check plagiarism. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +86,7 @@ export default function ChatWithFiles() {
 
   return (
     <div
-      className="min-h-[1dvh] w-full flex flex-col items-center justify-center"
+      className="min-h-[1dvh] w-full flex flex-col items-center justify-center pb-12"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -91,7 +97,7 @@ export default function ChatWithFiles() {
         setIsDragging(false);
         handleFileChange({
           target: { files: e.dataTransfer.files },
-        } as React.ChangeEvent<HTMLInputElement>);
+        });
       }}
     >
       <AnimatePresence>
@@ -102,91 +108,106 @@ export default function ChatWithFiles() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div>Drag and drop up to two PDFs here</div>
+            <div>Drag and drop a PDF here</div>
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex flex-col">
 
-      </div>
       <Card className="w-full max-w-md h-full border-0 sm:border sm:h-fit mt-12">
         <CardHeader className="text-center space-y-6">
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold">Upload PDFs</CardTitle>
+            <CardTitle className="text-2xl font-bold">Plagiarism Checker</CardTitle>
             <CardDescription className="text-base">
-              Upload two PDFs to generate a question paper.
+              Upload a PDF document to check for plagiarism.
             </CardDescription>
           </div>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmitWithFiles} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
               <input
                 type="file"
                 onChange={handleFileChange}
                 accept="application/pdf"
-                multiple
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
               <FileUp className="h-8 w-8 mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center">
-                {files.length > 0 ? (
+                {file ? (
                   <span className="font-medium text-foreground">
-                    {files.map((file) => file.name).join(", ")}
+                    {file.name}
                   </span>
                 ) : (
-                  <span>Drop your PDFs here or click to browse.</span>
+                  <span>Drop your PDF here or click to browse.</span>
                 )}
               </p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={files.length !== 2}>
+            <Button type="submit" className="w-full" disabled={!file || isLoading}>
               {isLoading ? (
                 <span className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Generating Paper...</span>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span>Checking Plagiarism...</span>
                 </span>
               ) : (
-                "Generate Question Paper"
+                "Check Plagiarism"
               )}
             </Button>
           </form>
         </CardContent>
-
-        <CardFooter className="flex flex-col items-center space-y-4">
-          {downloadUrl && <DownloadButton downloadUrl={downloadUrl} />}
-        </CardFooter>
       </Card>
 
+      {/* Results Section */}
+      {plagiarismResults.length > 0 && (
+        <div className="w-full max-w-4xl mt-8">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className={`h-5 w-5 ${overallSimilarity && overallSimilarity > 30 ? "text-red-500" : "text-yellow-500"}`} />
+                Overall Similarity: {overallSimilarity !== null ? `${overallSimilarity.toFixed(1)}%` : 'N/A'}
+              </CardTitle>
+              <CardDescription>
+                {overallSimilarity !== null ? (
+                  overallSimilarity > 30 
+                    ? "High similarity detected. Review the sources below."
+                    : "Low similarity detected. Document appears mostly original."
+                ) : ''}
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-      <div className="flex flex-col">
-        <Card className="w-full max-w-md h-full border-0 sm:border sm:h-fit mt-12">
-
-        <CardHeader className="text-center space-y-6">
-          <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold">Submit Custom prompt</CardTitle>
-            <CardDescription className="text-base">
-              Enter a custom description to the bot In order to aid it in making the question paper.
-            </CardDescription>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold">Plagiarism Sources</h2>
+            {plagiarismResults.map((result, index) => (
+              <Card key={index} className={`border-l-4 ${result.similarity > 50 ? "border-l-red-500" : "border-l-yellow-400"}`}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-medium flex justify-between">
+                    <span>Source {index + 1}</span>
+                    <span className={`${result.similarity > 50 ? "text-red-500" : "text-yellow-500"}`}>
+                      {result.similarity.toFixed(1)}% Match
+                    </span>
+                  </CardTitle>
+                  <CardDescription className="text-sm truncate">
+                    {result.url ? (
+                      <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        {result.source}
+                      </a>
+                    ) : (
+                      result.source
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-sm bg-muted p-3 rounded-md">
+                    <p className="italic">"{result.text}"</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={handleSubmitWithFiles} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Enter your custom prompt here"
-              className="w-full p-2 border-2 border-muted-foreground/25 rounded-lg"
-              value={customPrompt} // Bind input to state
-              onChange={(e) => setCustomPrompt(e.target.value)} // Update state on change
-            />
-          </form>
-        </CardContent>
-
-        </Card>
+        </div>
+      )}
     </div>
-    </div>
-    
   );
 }
