@@ -8,11 +8,16 @@ export const maxDuration = 60;
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY as string);
 const model = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
 
-// API Keys
+const { MongoClient } = require("mongodb");
+
+const uri = process.env.MONGODB_URI;
+
+const client = new MongoClient(uri);
+
 const X_API_KEY = process.env.X_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
-// Interface for plagiarism response
+
 interface PlagiarismSource {
   text: string;
   source: string;
@@ -48,10 +53,32 @@ export async function POST(req: Request) {
           mimeType: "application/pdf",
         },
       },
-      "You are an assistant, who analyses the PDF file given to you and returns only the Title/Name and Project Goal of content from this PDF document.Anywhere you see the name of a University/College, replace the name with the word University in the title. Return only the extracted text without any additional commentary."
+      `Extract the following details from this PDF and return ONLY valid JSON, without markdown or extra text:
+
+      {
+        "title": "Extracted Project Title",
+        "goal": "Extracted Project Goal",
+        "students": ["Student Name 1", "Student Name 2", "Student Name 3"]
+      }
+
+      Ensure all fields are properly formatted as a JSON object.`,
     ]);
     
+    console.log(extractionResult.response.text());
     const extractedText = extractionResult.response.text();
+
+    let cleanedExtractedText = cleanJsonResponse(extractedText);
+
+    let projectDetails;
+    try {
+      projectDetails = JSON.parse(cleanedExtractedText);
+    } catch (error) {
+      console.error("Error parsing extracted project details:", error);
+      return NextResponse.json({ error: "Invalid JSON response from LLM." }, { status: 500 });
+    }
+
+    console.log("Project details extracted:", projectDetails);
+
     
     if (!extractedText) {
       throw new Error("Failed to extract text from PDF.");
@@ -59,12 +86,16 @@ export async function POST(req: Request) {
 
     console.log("Text extracted successfully");
 
+    
+
     // Step 2: Generate optimized search queries
     const queryGenerationResult = await model.generateContent([
       `Generate 3 search queries that would help find similar content to this text. Each query should be focused on different aspects of the content. Return just the queries separated by newlines, without any additional text or numbering:
       
       ${extractedText.substring(0, 1000)}`
     ]);
+
+    
     
     const searchQueries = queryGenerationResult.response.text().split('\n').filter(q => q.trim());
     console.log("Generated search queries:", searchQueries);
@@ -86,7 +117,18 @@ export async function POST(req: Request) {
 
     console.log("Plagiarism analysis completed");
 
+    const collection = client.db("Db1");
+    const database = collection.collection("Synopsis Details");
+    await client.connect();
+    const result = await database.insertOne({ title: projectDetails.title,
+                    goal: projectDetails.goal,
+                    students: projectDetails.students,
+                    plagiarism: plagiarismResult,
+ });
+
     return NextResponse.json(plagiarismResult);
+
+
 
   } catch (error) {
     console.error("Error:", error);
@@ -101,7 +143,7 @@ async function searchWeb(queries: string[]) {
   try {
     const searchResults = [];
     
-    for (const query of queries.slice(0, 2)) { // Limit to 2 queries to avoid rate limits
+    for (const query of queries.slice(0, 2)) { 
       try {
         const response = await axios.post(
           "https://google.serper.dev/search",
@@ -128,7 +170,7 @@ async function searchGithub(queries: string[]) {
   try {
     const githubResults = [];
     
-    for (const query of queries.slice(0, 1)) { // Limit to 1 query for GitHub to avoid rate limits
+    for (const query of queries.slice(0, 1)) { 
       try {
         const MAX_QUERY_LENGTH = 250;
         const encodedQuery = encodeURIComponent(query.substring(0, MAX_QUERY_LENGTH));
@@ -169,7 +211,6 @@ async function analyzePlagiarism(
   githubResults: any[],
 ): Promise<PlagiarismResponse> {
   try {
-    // Use Gemini to analyze text against search results for plagiarism
     const result = await model.generateContent([
       `You are a plagiarism detection expert. Analyze the following text against the web search results and GitHub repositories to identify potential plagiarism.
       
@@ -203,10 +244,8 @@ async function analyzePlagiarism(
 
     const resultText = result.response.text();
     
-    // Clean up the response to extract just the JSON
     const cleanedResult = cleanJsonResponse(resultText);
     
-    // Parse the JSON response
     try {
       const plagiarismData = JSON.parse(cleanedResult);
       return plagiarismData as PlagiarismResponse;
@@ -214,7 +253,6 @@ async function analyzePlagiarism(
       console.error("Error parsing plagiarism result:", e);
       console.error("Attempted to parse:", cleanedResult);
       
-      // If parsing fails, return a default response with samples from the search results
       return generateFallbackResponse(webResults, githubResults);
     }
   } catch (error) {
@@ -231,7 +269,6 @@ function cleanJsonResponse(text: string): string {
   // Remove markdown code blocks if present
   let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
   
-  // Remove any potential explanation text before or after the JSON
   const jsonStart = cleanedText.indexOf('{');
   const jsonEnd = cleanedText.lastIndexOf('}') + 1;
   
@@ -242,17 +279,15 @@ function cleanJsonResponse(text: string): string {
   return cleanedText;
 }
 
-// Generate a fallback response when JSON parsing fails
 function generateFallbackResponse(webResults: any[], githubResults: any[]): PlagiarismResponse {
   const sources: PlagiarismSource[] = [];
   
-  // Add web results
   webResults.slice(0, 3).forEach((result, index) => {
     if (result.title && result.link) {
       sources.push({
         text: result.snippet || "Content may be similar to this source.",
         source: result.title,
-        similarity: 50 - (index * 10), // Decreasing similarity for each result
+        similarity: 50 - (index * 10),
         url: result.link
       });
     }
@@ -264,7 +299,7 @@ function generateFallbackResponse(webResults: any[], githubResults: any[]): Plag
       sources.push({
         text: repo.description || "Repository may contain similar code or concepts.",
         source: `${repo.name} (GitHub)`,
-        similarity: 40 - (index * 10), // Decreasing similarity for each result
+        similarity: 40 - (index * 10), 
         url: repo.url
       });
     }
