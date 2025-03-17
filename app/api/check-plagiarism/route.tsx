@@ -79,8 +79,11 @@ export async function POST(req: Request) {
       Ensure all fields are properly formatted as a JSON object.`,
     ]);
     
-    console.log(extractionResult.response.text());
+    if (!extractionResult.response || !extractionResult.response.text) {
+      throw new Error("Invalid response from Gemini model.");
+    }
     const extractedText = extractionResult.response.text();
+    
 
     let cleanedExtractedText = cleanJsonResponse(extractedText);
 
@@ -112,7 +115,11 @@ export async function POST(req: Request) {
 
     
     
+    if (!queryGenerationResult.response || !queryGenerationResult.response.text) {
+      throw new Error("Invalid response from Gemini model.");
+    }
     const searchQueries = queryGenerationResult.response.text().split('\n').filter(q => q.trim());
+    
     console.log("Generated search queries:", searchQueries);
 
     // Step 3: Search for similar content on the web
@@ -284,6 +291,9 @@ async function analyzePlagiarism(
 // Helper function to clean JSON response from Gemini
 function cleanJsonResponse(text: string): string {
   // Remove markdown code blocks if present
+  if (!text) {
+    throw new Error("Received empty or undefined text for cleaning.");
+  }
   let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
   
   const jsonStart = cleanedText.indexOf('{');
