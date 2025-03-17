@@ -10,6 +10,21 @@ const model = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
 
 const { MongoClient } = require("mongodb");
 
+require("dotenv").config();
+const { google } = require("googleapis");
+
+if (!process.env.GOOGLE_SHEETS_CREDENTIALS) {
+  throw new Error("GOOGLE_SHEETS_CREDENTIALS environment variable is not defined");
+}
+const credentials = JSON.parse(process.env.GOOGLE_SHEETS_CREDENTIALS);
+
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+
+const spreadsheetId = process.env.SPREADSHEET_ID; 
+
 const uri = process.env.MONGODB_URI;
 
 const client = new MongoClient(uri);
@@ -125,6 +140,8 @@ export async function POST(req: Request) {
                     students: projectDetails.students,
                     plagiarism: plagiarismResult,
  });
+      await writeToSheet(projectDetails, plagiarismResult);
+
 
     return NextResponse.json(plagiarismResult);
 
@@ -309,4 +326,41 @@ function generateFallbackResponse(webResults: any[], githubResults: any[]): Plag
     overallSimilarity: sources.length > 0 ? 45 : 0,
     sources: sources
   };
+}
+
+
+// Function to write data to Google Sheets
+async function writeToSheet(projectDetails: any, plagiarismResult: any) {
+  const sheets = google.sheets({ version: "v4", auth });
+
+  const numStudents = projectDetails.students?.length || 0;
+  const numSources = plagiarismResult.sources?.length || 0;
+
+  // Generate headers dynamically
+  const baseHeaders = ["Project Title", "Project Goal"];
+  const studentHeaders = Array.from({ length: numStudents }, (_, i) => `Student ${i + 1}`);
+  const plagiarismHeaders = ["Plagiarism %"];
+  const sourceHeaders = Array.from({ length: numSources }, (_, i) => `Source ${i + 1}`);
+
+  const headerRow = [...baseHeaders, ...studentHeaders, ...plagiarismHeaders, ...sourceHeaders];
+
+  const studentCells = projectDetails.students || [];
+  const sourceCells = plagiarismResult.sources?.map((s: any) => s.url ? s.url : (s.source || s.text)) || [];
+
+  const rowData = [
+    projectDetails.title,
+    projectDetails.goal,
+    ...studentCells,
+    plagiarismResult.overallSimilarity + "%",
+    ...sourceCells
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: "Sheet1!A:Z",
+    valueInputOption: "RAW",
+    resource: { values: [rowData] },
+  });
+
+  console.log("✅ Data written to Google Sheets dynamically!");
 }
