@@ -60,7 +60,6 @@ export async function POST(req: Request) {
 
     console.log("File received successfully");
 
-    // Step 1: Extract text content from PDF using Gemini
     const extractionResult = await model.generateContent([
       {
         inlineData: {
@@ -106,7 +105,6 @@ export async function POST(req: Request) {
 
     
 
-    // Step 2: Generate optimized search queries
     const queryGenerationResult = await model.generateContent([
       `Generate 3 search queries that would help find similar content to this text. Each query should be focused on different aspects of the content. Return just the queries separated by newlines, without any additional text or numbering:
       
@@ -122,15 +120,12 @@ export async function POST(req: Request) {
     
     console.log("Generated search queries:", searchQueries);
 
-    // Step 3: Search for similar content on the web
     const webResults = await searchWeb(searchQueries);
     console.log(`Found ${webResults.length} web results`);
 
-    // Step 4: Search for similar repositories on GitHub
     const githubResults = await searchGithub(searchQueries);
     console.log(`Found ${githubResults.length} GitHub repositories`);
 
-    // Step 5: Analyze plagiarism using Gemini
     const plagiarismResult = await analyzePlagiarism(
       extractedText, 
       webResults,
@@ -162,6 +157,9 @@ export async function POST(req: Request) {
     );
   }
 }
+
+
+
 
 async function searchWeb(queries: string[]) {
   try {
